@@ -6,12 +6,12 @@ import "react-native-reanimated";
 
 export default function RootLayout() {
   return (
-    <ThemeProvider value={DefaultTheme}>
       <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="index" options={{ headerShown: true }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: true }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: true }} />
+        
         <Stack.Screen name="+not-found" />
       </Stack>
-      <StatusBar style="dark" />
-    </ThemeProvider>
   );
 }
