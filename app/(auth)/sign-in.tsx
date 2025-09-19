@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { View, Text, TextInput, TouchableOpacity } from "react-native"
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { router, Link } from "expo-router"
 import { supabase } from "../../lib/supabase"
@@ -8,21 +8,36 @@ export default function SignIn() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
+  const [loading, setLoading] = useState(false)
 
   const handleSignIn = async () => {
     setErrorMessage("")
+    setLoading(true)
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
 
+    setLoading(false)
     if (error) {
       setErrorMessage(error.message)
       return
     }
+    router.replace("/(root)/(tabs)/home")
+  }
 
-    // If login works, redirect to main app
+  const handleSkipLogin = async () => {
+    setErrorMessage("")
+    setLoading(true)
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: "xorej44434@camjoint.com",
+      password: "password",
+    })
+
+    setLoading(false)
+    if (error) {
+      setErrorMessage(error.message)
+      return
+    }
     router.replace("/(root)/(tabs)/home")
   }
 
@@ -39,6 +54,8 @@ export default function SignIn() {
           onChangeText={setEmail}
           placeholder="Email"
           placeholderTextColor="#CED1DD"
+          keyboardType="email-address"
+          autoCapitalize="none"
           className="w-full bg-white rounded-xl px-4 py-3 mb-4 font-Jakarta"
         />
 
@@ -55,16 +72,32 @@ export default function SignIn() {
         {/* Sign In Button */}
         <TouchableOpacity
           onPress={handleSignIn}
-          className="w-full bg-white py-3 rounded-2xl mb-4"
+          disabled={loading}
+          className={`w-full py-3 rounded-2xl mb-3 ${loading ? "bg-white/80" : "bg-white"}`}
         >
-          <Text className="font-JakartaSemiBold text-primary-500 text-center">
-            Sign In
+          {loading ? (
+            <ActivityIndicator />
+          ) : (
+            <Text className="font-JakartaSemiBold text-primary-500 text-center">
+              Sign In
+            </Text>
+          )}
+        </TouchableOpacity>
+
+        {/* Skip Login (Test Account) */}
+        <TouchableOpacity
+          onPress={handleSkipLogin}
+          disabled={loading}
+          className="w-full border border-white/70 py-3 rounded-2xl mb-6"
+        >
+          <Text className="font-JakartaSemiBold text-white text-center">
+            Skip login (use test account)
           </Text>
         </TouchableOpacity>
 
         {/* Error Message */}
         {errorMessage ? (
-          <Text className="text-red-500 text-center">{errorMessage}</Text>
+          <Text className="text-red-300 text-center mb-3">{errorMessage}</Text>
         ) : null}
 
         {/* Link to Sign Up */}
