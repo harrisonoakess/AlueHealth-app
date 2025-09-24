@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { View, Text, TextInput, TouchableOpacity } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { router } from "expo-router"
+import { router, Link } from "expo-router"
 import { supabase } from "../../lib/supabase"
 
 export default function SignUp() {
@@ -9,23 +9,40 @@ export default function SignUp() {
   const [password, setPassword] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
 
-  const handleSignUp = async () => {
-    setErrorMessage("")
+const handleSignUp = async () => {
+  setErrorMessage("")
 
-    // Step 1: Sign up with Supabase auth
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    })
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+  })
 
-    if (error) {
-      setErrorMessage(error.message)
-      return
-    }
-
-    // Step 2: Redirect to home after signup
-    router.replace("/(root)/(tabs)/home")
+  if (error) {
+    setErrorMessage(error.message)
+    return
   }
+
+  // ✅ Get user explicitly
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (user) {
+    await supabase.from("profiles").insert({
+      id: user.id,
+      full_name: null,
+      date_of_birth: null,
+      height_cm: null,
+      weight_kg: null,
+      child_number: null,
+      due_date: null,
+      onboarding_complete: false, // make sure this column exists
+    })
+  }
+
+  // ✅ Redirect to Welcome
+  router.replace("/(auth)/(onboarding)/welcome")
+}
+
+
 
   return (
     <SafeAreaView className="flex-1 bg-primary-500 px-6">
@@ -34,7 +51,6 @@ export default function SignUp() {
           Create Account
         </Text>
 
-        {/* Email */}
         <TextInput
           value={email}
           onChangeText={setEmail}
@@ -43,7 +59,6 @@ export default function SignUp() {
           className="w-full bg-white rounded-xl px-4 py-3 mb-4 font-Jakarta"
         />
 
-        {/* Password */}
         <TextInput
           value={password}
           onChangeText={setPassword}
@@ -53,7 +68,6 @@ export default function SignUp() {
           className="w-full bg-white rounded-xl px-4 py-3 mb-6 font-Jakarta"
         />
 
-        {/* Sign Up Button */}
         <TouchableOpacity
           onPress={handleSignUp}
           className="w-full bg-white py-3 rounded-2xl mb-4"
@@ -63,9 +77,16 @@ export default function SignUp() {
           </Text>
         </TouchableOpacity>
 
-        {/* Error Message */}
+        {/* Already have account? */}
+        <Text className="text-white text-center font-Jakarta mt-2">
+          Already have an account?{" "}
+          <Link href="/(auth)/sign-in" className="text-warning-300 font-JakartaSemiBold">
+            Sign In
+          </Link>
+        </Text>
+
         {errorMessage ? (
-          <Text className="text-red-500 text-center">{errorMessage}</Text>
+          <Text className="text-red-500 text-center mt-4">{errorMessage}</Text>
         ) : null}
       </View>
     </SafeAreaView>

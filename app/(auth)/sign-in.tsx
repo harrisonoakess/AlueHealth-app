@@ -10,19 +10,45 @@ export default function SignIn() {
   const [errorMessage, setErrorMessage] = useState("")
   const [loading, setLoading] = useState(false)
 
-  const handleSignIn = async () => {
-    setErrorMessage("")
-    setLoading(true)
+  const afterLogin = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    // Check onboarding flag
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("onboarding_complete")
+      .eq("id", user.id)
+      .maybeSingle()
 
-    setLoading(false)
     if (error) {
       setErrorMessage(error.message)
       return
     }
-    router.replace("/(root)/(tabs)/home")
+
+    if (!profile || !profile.onboarding_complete) {
+      router.replace("/(auth)/(onboarding)/enter_info")
+    } else {
+      router.replace("/(root)/(tabs)/home")
+    }
   }
+
+  const handleSignIn = async () => {
+  setErrorMessage("")
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+
+  if (error) {
+    setErrorMessage(error.message)
+    return
+  }
+
+  // ✅ Go to Welcome
+  router.replace("/(auth)/(onboarding)/welcome")
+}
 
   const handleSkipLogin = async () => {
     setErrorMessage("")
@@ -32,13 +58,14 @@ export default function SignIn() {
       email: "xorej44434@camjoint.com",
       password: "password",
     })
-
     setLoading(false)
+
     if (error) {
       setErrorMessage(error.message)
       return
     }
-    router.replace("/(root)/(tabs)/home")
+
+    await afterLogin()
   }
 
   return (
@@ -48,7 +75,6 @@ export default function SignIn() {
           Sign In
         </Text>
 
-        {/* Email */}
         <TextInput
           value={email}
           onChangeText={setEmail}
@@ -59,7 +85,6 @@ export default function SignIn() {
           className="w-full bg-white rounded-xl px-4 py-3 mb-4 font-Jakarta"
         />
 
-        {/* Password */}
         <TextInput
           value={password}
           onChangeText={setPassword}
@@ -69,7 +94,6 @@ export default function SignIn() {
           className="w-full bg-white rounded-xl px-4 py-3 mb-6 font-Jakarta"
         />
 
-        {/* Sign In Button */}
         <TouchableOpacity
           onPress={handleSignIn}
           disabled={loading}
@@ -84,7 +108,6 @@ export default function SignIn() {
           )}
         </TouchableOpacity>
 
-        {/* Skip Login (Test Account) */}
         <TouchableOpacity
           onPress={handleSkipLogin}
           disabled={loading}
@@ -95,12 +118,10 @@ export default function SignIn() {
           </Text>
         </TouchableOpacity>
 
-        {/* Error Message */}
         {errorMessage ? (
           <Text className="text-red-300 text-center mb-3">{errorMessage}</Text>
         ) : null}
 
-        {/* Link to Sign Up */}
         <Text className="text-white text-center font-Jakarta">
           Don’t have an account?{" "}
           <Link href="/(auth)/sign-up" className="text-warning-300 font-JakartaSemiBold">
