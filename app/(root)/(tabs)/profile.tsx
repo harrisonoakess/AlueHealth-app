@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { Link, router } from "expo-router"
-import { supabase } from "../../../lib/supabase"  // ✅ fixed path
+import { supabase } from "../../../lib/supabase"
 
 export default function ProfileView() {
   const [profile, setProfile] = useState<any>(null)

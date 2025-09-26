@@ -1,5 +1,12 @@
 import { useState } from "react"
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from "react-native"
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+} from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { router, Link } from "expo-router"
 import { supabase } from "../../lib/supabase"
@@ -29,28 +36,43 @@ export default function SignIn() {
     if (!profile || !profile.onboarding_complete) {
       router.replace("/(auth)/(onboarding)/enter_info")
     } else {
-      router.replace("/(root)/(tabs)/home")
+      router.replace("/(root)/(tabs)/checkin")
     }
   }
 
-  const handleSignIn = async () => {
-  setErrorMessage("")
-
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  })
-
-  if (error) {
-    setErrorMessage(error.message)
-    return
+  const validateForm = () => {
+    if (!email || !password) {
+      setErrorMessage("Email and password are required")
+      return false
+    }
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      setErrorMessage("Please enter a valid email")
+      return false
+    }
+    setErrorMessage("")
+    return true
   }
 
-  // ✅ Go to Welcome
-  router.replace("/(auth)/(onboarding)/welcome")
-}
+  const handleSignIn = async () => {
+    if (!validateForm()) return
 
-  const handleSkipLogin = async () => {
+    setLoading(true)
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+    setLoading(false)
+
+    if (error) {
+      setErrorMessage(error.message)
+      return
+    }
+
+    // Go to welcome screen first
+    router.replace("/(auth)/(onboarding)/welcome")
+  }
+
+  const handleDemoSignIn = async () => {
     setErrorMessage("")
     setLoading(true)
 
@@ -69,12 +91,17 @@ export default function SignIn() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-primary-500 px-6">
-      <View className="flex-1 justify-center">
-        <Text className="text-3xl font-JakartaExtraBold text-white mb-8">
-          Sign In
+    <SafeAreaView className="flex-1 bg-primary-500">
+      <View className="flex-1 justify-center px-6">
+        {/* Header */}
+        <Text className="text-4xl font-JakartaExtraBold text-white mb-2 text-center">
+          Welcome Back
+        </Text>
+        <Text className="text-neutral-100 font-Jakarta text-center mb-8">
+          Sign in to track your nutrition
         </Text>
 
+        {/* Email */}
         <TextInput
           value={email}
           onChangeText={setEmail}
@@ -82,22 +109,33 @@ export default function SignIn() {
           placeholderTextColor="#CED1DD"
           keyboardType="email-address"
           autoCapitalize="none"
-          className="w-full bg-white rounded-xl px-4 py-3 mb-4 font-Jakarta"
+          className="w-full bg-white rounded-xl px-4 py-3 mb-4 font-Jakarta text-neutral-800"
         />
 
+        {/* Password */}
         <TextInput
           value={password}
           onChangeText={setPassword}
           placeholder="Password"
           placeholderTextColor="#CED1DD"
           secureTextEntry
-          className="w-full bg-white rounded-xl px-4 py-3 mb-6 font-Jakarta"
+          className="w-full bg-white rounded-xl px-4 py-3 mb-2 font-Jakarta text-neutral-800"
         />
 
+        {/* Error */}
+        {errorMessage ? (
+          <Text className="text-danger-500 text-center mb-3 font-Jakarta">
+            {errorMessage}
+          </Text>
+        ) : null}
+
+        {/* Sign In Button */}
         <TouchableOpacity
           onPress={handleSignIn}
           disabled={loading}
-          className={`w-full py-3 rounded-2xl mb-3 ${loading ? "bg-white/80" : "bg-white"}`}
+          className={`w-full py-3 rounded-2xl mb-4 ${
+            loading ? "bg-neutral-300" : "bg-white"
+          }`}
         >
           {loading ? (
             <ActivityIndicator />
@@ -108,23 +146,24 @@ export default function SignIn() {
           )}
         </TouchableOpacity>
 
+        {/* Demo Account Button */}
         <TouchableOpacity
-          onPress={handleSkipLogin}
+          onPress={handleDemoSignIn}
           disabled={loading}
-          className="w-full border border-white/70 py-3 rounded-2xl mb-6"
+          className="w-full border border-white/70 py-3 rounded-2xl mb-8"
         >
           <Text className="font-JakartaSemiBold text-white text-center">
-            Skip login (use test account)
+            Use Demo Account
           </Text>
         </TouchableOpacity>
 
-        {errorMessage ? (
-          <Text className="text-red-300 text-center mb-3">{errorMessage}</Text>
-        ) : null}
-
+        {/* Switch to Sign Up */}
         <Text className="text-white text-center font-Jakarta">
           Don’t have an account?{" "}
-          <Link href="/(auth)/sign-up" className="text-warning-300 font-JakartaSemiBold">
+          <Link
+            href="/(auth)/sign-up"
+            className="text-warning-500 font-JakartaSemiBold"
+          >
             Sign Up
           </Link>
         </Text>

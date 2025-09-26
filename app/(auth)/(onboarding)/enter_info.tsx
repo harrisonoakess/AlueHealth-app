@@ -39,7 +39,7 @@ export default function EnterInfo() {
 
       if (error) throw error
 
-      router.replace("/(root)/(tabs)/home")
+      router.replace("/(root)/(tabs)/checkin")
     } catch (e: any) {
       Alert.alert("Error", e.message ?? "Failed to save info")
     } finally {
