@@ -15,3 +15,49 @@ export default function Checkin() {
     </SafeAreaView>
   )
 }
+
+
+
+
+// import React, { useState } from "react";
+// import { View, Text, Button } from "react-native";
+// import { BACKEND_URL } from "../../../config"; // import your URL
+
+// export default function TestBackendScreen() {
+//   const [message, setMessage] = useState("");
+
+//   async function testBackend() {
+//     try {
+//       const res = await fetch(`${BACKEND_URL}/`);
+//       const data = await res.json();
+//       setMessage(data.message);
+//     } catch (err) {
+//       console.error(err);
+//       setMessage("❌ Error connecting to backend");
+//     }
+//   }
+
+//   async function testOpenAI() {
+//     try {
+//       const res = await fetch(`${BACKEND_URL}/test-openai`);
+//       const data = await res.json();
+//       setMessage(JSON.stringify(data.openai_response ?? data));
+//     } catch (err) {
+//       console.error(err);
+//       setMessage("❌ Error calling OpenAI");
+//     }
+//   }
+
+//   return (
+//     <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+//       <Button title="Test Backend" onPress={testBackend} />
+//       <Button title="Test OpenAI" onPress={testOpenAI} />
+//       <Text style={{ marginTop: 20, padding: 10 }}>{message}</Text>
+//     </View>
+//   );
+// }
+
+
+
+
+
