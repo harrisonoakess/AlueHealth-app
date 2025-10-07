@@ -18,7 +18,7 @@ export default function Checkin() {
 
 
 
-
+// // Use this for testing backend connectivity
 // import React, { useState } from "react";
 // import { View, Text, Button } from "react-native";
 // import { BACKEND_URL } from "../../../config"; // import your URL

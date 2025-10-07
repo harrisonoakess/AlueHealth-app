@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
+import MealModal from "../../../components/modals/AfterPictureModal";
 
 type Meal = {
   id: string;
@@ -24,6 +25,9 @@ type Meal = {
 export default function MealsTab() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [meals, setMeals] = useState<Meal[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [pendingMeal, setPendingMeal] = useState<Meal | null>(null);
+
 
   const requestCameraPermission = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -33,6 +37,7 @@ export default function MealsTab() {
     }
     return true;
   };
+  
 
   const requestMediaLibraryPermission = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -84,30 +89,25 @@ export default function MealsTab() {
   };
 
   const processImage = async (imageUri: string) => {
-    setIsAnalyzing(true);
-    try {
-      // Fake analysis for now
-      const newMeal: Meal = {
-        id: Date.now().toString(),
-        name: "Sample Meal",
-        imageUri,
-        timestamp: new Date(),
-        calories: 450,
-      };
+  setIsAnalyzing(true);
+  try {
+    const newMeal: Meal = {
+      id: Date.now().toString(),
+      name: "Sample Meal",
+      imageUri,
+      timestamp: new Date(),
+      calories: 450,
+    };
 
-      setMeals((prev) => [newMeal, ...prev]);
+    setPendingMeal(newMeal);
+    setShowModal(true); // 👈 show modal instead of adding directly
+  } catch (error) {
+    Alert.alert("Error", "Failed to analyze the image. Please try again.");
+  } finally {
+    setIsAnalyzing(false);
+  }
+};
 
-      Alert.alert(
-        "Meal Added!",
-        `${newMeal.name} has been added to your meals.`,
-        [{ text: "OK" }]
-      );
-    } catch (error) {
-      Alert.alert("Error", "Failed to analyze the image. Please try again.");
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -185,6 +185,21 @@ export default function MealsTab() {
           )}
         </View>
       </ScrollView>
+      <MealModal
+        visible={showModal}
+        meal={pendingMeal}
+        onConfirm={() => {
+          if (pendingMeal) {
+            setMeals((prev) => [pendingMeal, ...prev]);
+          }
+          setPendingMeal(null);
+          setShowModal(false);
+        }}
+        onCancel={() => {
+          setPendingMeal(null);
+          setShowModal(false);
+        }}
+      />
     </SafeAreaView>
   );
 }
