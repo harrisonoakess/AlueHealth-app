@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import logging
 import os
 from typing import Any
@@ -49,9 +50,12 @@ STRUCTURED_SCHEMA: dict[str, Any] = {
 structured_schema = STRUCTURED_SCHEMA  # backwards compatibility if code references lowercase name
 
 
+BACKEND_REVISION = os.getenv("BACKEND_REVISION", "dev-local")
+
+
 @app.get("/")
 def root():
-    return {"message": "✅ Backend is running!"}
+    return {"message": "✅ Backend is running!", "backend_revision": BACKEND_REVISION}
 
 
 @app.get("/test-openai")
@@ -94,19 +98,30 @@ async def analyze_meal(
             f"User note (if any): {note or 'n/a'}"
         )
 
-        resp = client.responses.create(
-            model="gpt-4.1-mini",
-            input=[{
-                "role": "user",
-                "content": [
-                    {"type": "input_text", "text": prompt},
-                    {"type": "input_image", "image_url": data_uri},
-                ],
-            }],
-            response_format={"type": "json_schema", "json_schema": STRUCTURED_SCHEMA},
+        schema = globals().get("STRUCTURED_SCHEMA") or globals().get("structured_schema")
+        if not schema:
+            raise RuntimeError("Structured schema not initialised on server")
+
+        schema_hint = json.dumps(schema["schema"])
+        prompt_with_schema = (
+            f"{prompt}\n\nReturn ONLY raw JSON (no markdown or commentary) matching this schema: {schema_hint}."
         )
 
-        raw_json: str | None = None
+        response_input = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "input_text", "text": prompt_with_schema},
+                    {"type": "input_image", "image_url": data_uri},
+                ],
+            }
+        ]
+
+        resp = client.responses.create(
+            model="gpt-4.1-mini",
+            input=response_input,
+        )
+
         try:
             raw_json = resp.output[0].content[0].text  # type: ignore[index]
         except (AttributeError, IndexError, TypeError):
@@ -139,8 +154,10 @@ async def analyze_meal(
         return meal.model_dump()
 
     except ValidationError as err:
+        logging.exception("Schema validation failed: %s", err)
         raise HTTPException(400, f"Schema validation failed: {err}") from err
     except HTTPException:
         raise
     except Exception as err:
+        logging.exception("Meal analysis request crashed: %s", err)
         raise HTTPException(500, f"Analysis failed: {err}") from err

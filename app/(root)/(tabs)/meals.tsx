@@ -12,22 +12,25 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
-import MealModal from "../../../components/modals/AfterPictureModal";
 
-type Meal = {
+import MealModal from "../../../components/modals/AfterPictureModal";
+import {
+  analyzeMealImage,
+  MealAnalysisResponse,
+} from "../../../lib/mealAnalysis";
+
+type LoggedMeal = {
   id: string;
-  name: string;
   imageUri: string;
-  timestamp: Date;
-  calories: number;
+  capturedAt: Date;
+  analysis: MealAnalysisResponse;
 };
 
 export default function MealsTab() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [meals, setMeals] = useState<Meal[]>([]);
+  const [meals, setMeals] = useState<LoggedMeal[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [pendingMeal, setPendingMeal] = useState<Meal | null>(null);
-
+  const [pendingMeal, setPendingMeal] = useState<LoggedMeal | null>(null);
 
   const requestCameraPermission = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -37,7 +40,6 @@ export default function MealsTab() {
     }
     return true;
   };
-  
 
   const requestMediaLibraryPermission = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -64,6 +66,7 @@ export default function MealsTab() {
         await processImage(result.assets[0].uri);
       }
     } catch (error) {
+      console.error(error);
       Alert.alert("Error", "Failed to take photo. Please try again.");
     }
   };
@@ -84,30 +87,47 @@ export default function MealsTab() {
         await processImage(result.assets[0].uri);
       }
     } catch (error) {
+      console.error(error);
       Alert.alert("Error", "Failed to select photo. Please try again.");
     }
   };
 
   const processImage = async (imageUri: string) => {
-  setIsAnalyzing(true);
-  try {
-    const newMeal: Meal = {
-      id: Date.now().toString(),
-      name: "Sample Meal",
-      imageUri,
-      timestamp: new Date(),
-      calories: 450,
-    };
+    setIsAnalyzing(true);
+    setShowModal(false);
+    setPendingMeal(null);
 
-    setPendingMeal(newMeal);
-    setShowModal(true); // 👈 show modal instead of adding directly
-  } catch (error) {
-    Alert.alert("Error", "Failed to analyze the image. Please try again.");
-  } finally {
-    setIsAnalyzing(false);
-  }
-};
+    try {
+      const analysis = await analyzeMealImage(imageUri);
+      const newMeal: LoggedMeal = {
+        id: analysis.meal_id ?? Date.now().toString(),
+        imageUri,
+        capturedAt: new Date(),
+        analysis,
+      };
 
+      setPendingMeal(newMeal);
+      setShowModal(true);
+    } catch (error) {
+      console.error(error);
+      const message = error instanceof Error ? error.message : "Failed to analyze the image. Please try again.";
+      Alert.alert("Analysis failed", message);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const confirmMeal = () => {
+    if (!pendingMeal) return;
+    setMeals((prev) => [pendingMeal, ...prev]);
+    setPendingMeal(null);
+    setShowModal(false);
+  };
+
+  const cancelMeal = () => {
+    setPendingMeal(null);
+    setShowModal(false);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -115,7 +135,6 @@ export default function MealsTab() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Today&apos;s Meals</Text>
           <Text style={styles.date}>
@@ -127,7 +146,6 @@ export default function MealsTab() {
           </Text>
         </View>
 
-        {/* Add Meal */}
         <View style={styles.section}>
           <Text style={styles.subtitle}>Add New Meal</Text>
 
@@ -160,7 +178,6 @@ export default function MealsTab() {
           )}
         </View>
 
-        {/* Meals List */}
         <View style={styles.section}>
           {meals.length === 0 ? (
             <View style={styles.emptyState}>
@@ -171,34 +188,43 @@ export default function MealsTab() {
               </Text>
             </View>
           ) : (
-            meals.map((meal) => (
-              <View key={meal.id} style={styles.mealCard}>
-                <Image source={{ uri: meal.imageUri }} style={styles.mealImage} />
-                <View style={styles.mealInfo}>
-                  <Text style={styles.mealName}>{meal.name}</Text>
-                  <Text style={styles.mealDetails}>
-                    {meal.calories} kcal • {meal.timestamp.toLocaleTimeString()}
-                  </Text>
+            meals.map((meal) => {
+              const itemSummary = meal.analysis.items.map((item) => item.name).join(", ");
+              const totalCalories = Math.round(meal.analysis.calories_total);
+              const macros = meal.analysis.items.reduce(
+                (acc, item) => ({
+                  protein: acc.protein + item.macros.protein_g,
+                  carbs: acc.carbs + item.macros.carbs_g,
+                  fat: acc.fat + item.macros.fat_g,
+                }),
+                { protein: 0, carbs: 0, fat: 0 },
+              );
+
+              return (
+                <View key={meal.id} style={styles.mealCard}>
+                  <Image source={{ uri: meal.imageUri }} style={styles.mealImage} />
+                  <View style={styles.mealInfo}>
+                    <Text style={styles.mealName}>
+                      {itemSummary || "Meal"}
+                    </Text>
+                    <Text style={styles.mealDetails}>
+                      {totalCalories} kcal • {meal.capturedAt.toLocaleTimeString()}
+                    </Text>
+                    <Text style={styles.macroLine}>
+                      P {Math.round(macros.protein)}g · C {Math.round(macros.carbs)}g · F {Math.round(macros.fat)}g
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            ))
+              );
+            })
           )}
         </View>
       </ScrollView>
       <MealModal
         visible={showModal}
         meal={pendingMeal}
-        onConfirm={() => {
-          if (pendingMeal) {
-            setMeals((prev) => [pendingMeal, ...prev]);
-          }
-          setPendingMeal(null);
-          setShowModal(false);
-        }}
-        onCancel={() => {
-          setPendingMeal(null);
-          setShowModal(false);
-        }}
+        onConfirm={confirmMeal}
+        onCancel={cancelMeal}
       />
     </SafeAreaView>
   );
@@ -245,5 +271,6 @@ const styles = StyleSheet.create({
   mealImage: { width: 60, height: 60, borderRadius: 8, marginRight: 12 },
   mealInfo: { flex: 1 },
   mealName: { fontSize: 16, fontWeight: "600", color: "#111" },
-  mealDetails: { fontSize: 12, color: "#6b7280" },
+  mealDetails: { fontSize: 12, color: "#6b7280", marginTop: 2 },
+  macroLine: { fontSize: 12, color: "#4b5563", marginTop: 4 },
 });
