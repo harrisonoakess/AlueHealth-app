@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import * as ImageManipulator from "expo-image-manipulator";
 import { BACKEND_URL } from "../config";
 
 export type MealMacros = {
@@ -42,13 +43,12 @@ export async function analyzeMealImage(
   formData.append("account_id", accountId);
 
   const filename = imageUri.split("/").pop() ?? `meal-${Date.now()}.jpg`;
-  const fileExtension = filename.split(".").pop()?.toLowerCase();
-  const mimeType = getMimeType(fileExtension);
+  const normalised = await normaliseImageForUpload(imageUri, filename);
 
   formData.append("image", {
-    uri: prepareUri(imageUri),
-    type: mimeType,
-    name: filename,
+    uri: prepareUri(normalised.uri),
+    type: normalised.mimeType,
+    name: normalised.filename,
   } as any);
 
   const response = await fetch(`${BACKEND_URL}/analyze-meal`, {
@@ -62,6 +62,46 @@ export async function analyzeMealImage(
   }
 
   return (await response.json()) as MealAnalysisResponse;
+}
+
+const MAX_UPLOAD_WIDTH = 1024;
+
+type NormalisedImage = {
+  uri: string;
+  mimeType: string;
+  filename: string;
+};
+
+async function normaliseImageForUpload(imageUri: string, filename: string): Promise<NormalisedImage> {
+  try {
+    const result = await ImageManipulator.manipulateAsync(
+      imageUri,
+      [{ resize: { width: MAX_UPLOAD_WIDTH } }],
+      { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
+    );
+
+    return {
+      uri: result.uri,
+      mimeType: "image/jpeg",
+      filename: ensureExtension(filename, "jpg"),
+    };
+  } catch (error) {
+    console.warn("Image normalisation failed; falling back to original", error);
+    const extension = filename.split(".").pop()?.toLowerCase();
+    return {
+      uri: imageUri,
+      mimeType: getMimeType(extension),
+      filename,
+    };
+  }
+}
+
+function ensureExtension(name: string, ext: string): string {
+  if (name.toLowerCase().endsWith(`.${ext}`)) {
+    return name;
+  }
+  const base = name.includes(".") ? name.slice(0, name.lastIndexOf(".")) : name;
+  return `${base}.${ext}`;
 }
 
 function getMimeType(extension?: string): string {

@@ -122,6 +122,8 @@ async def analyze_meal(
             input=response_input,
         )
 
+        raw_json: str | None = None
+
         try:
             raw_json = resp.output[0].content[0].text  # type: ignore[index]
         except (AttributeError, IndexError, TypeError):
@@ -137,19 +139,19 @@ async def analyze_meal(
         meal.model_version = getattr(resp, "model", None)
         meal.source_image_id = image.filename
 
-        if supabase:
-            record = {
-                "account_id": account_id or None,
-                "meal_id": meal.meal_id,
-                "timestamp_iso": meal.timestamp_iso,
-                "calories_total": meal.calories_total,
-                "items": [item.model_dump() for item in meal.items],
-                "suggestion": meal.suggestion,
-                "assumptions": meal.assumptions,
-                "model_version": meal.model_version,
-                "source_image_id": meal.source_image_id,
-            }
-            supabase.table("meals").insert(record).execute()
+        # if supabase:
+        #     record = {
+        #         "account_id": account_id or None,
+        #         "meal_id": meal.meal_id,
+        #         "timestamp_iso": meal.timestamp_iso,
+        #         "calories_total": meal.calories_total,
+        #         "items": [item.model_dump() for item in meal.items],
+        #         "suggestion": meal.suggestion,
+        #         "assumptions": meal.assumptions,
+        #         "model_version": meal.model_version,
+        #         "source_image_id": meal.source_image_id,
+        #     }
+        #     supabase.table("meals").insert(record).execute()
 
         return meal.model_dump()
 
