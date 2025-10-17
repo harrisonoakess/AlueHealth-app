@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../../lib/supabase"
+import ViewMealModal from "../../components/modals/ViewMealModal"
 
 import MealModal from "../../../components/modals/AfterPictureModal";
 import {
@@ -149,6 +150,7 @@ async function saveMealToDb(
 
 
 export default function MealsTab() {
+  const [selectedMeal, setSelectedMeal] = useState<LoggedMeal | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [meals, setMeals] = useState<LoggedMeal[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -463,24 +465,29 @@ export default function MealsTab() {
               );
 
               return (
-                <View key={meal.id} style={styles.mealCard}>
-                  <Image
-                    source={meal.imageUri ? { uri: meal.imageUri } : mealPlaceholder}
-                    style={styles.mealImage}
-                  />
-                  <View style={styles.mealInfo}>
-                    <Text style={styles.mealName}>
-                      {itemSummary || "Meal"}
-                    </Text>
-                    <Text style={styles.mealDetails}>
-                      {totalCalories} kcal • {meal.capturedAt.toLocaleTimeString()}
-                    </Text>
-                    <Text style={styles.macroLine}>
-                      P {Math.round(macros.protein)}g · C {Math.round(macros.carbs)}g · F {Math.round(macros.fat)}g
-                    </Text>
-                  </View>
-                </View>
-              );
+                  <TouchableOpacity
+                    key={meal.id}
+                    style={styles.mealCard}
+                    activeOpacity={0.8}
+                    onPress={() => setSelectedMeal(meal)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View details for meal logged at ${meal.capturedAt.toLocaleTimeString()}`}
+                  >
+                    <Image
+                      source={meal.imageUri ? { uri: meal.imageUri } : mealPlaceholder}
+                      style={styles.mealImage}
+                    />
+                    <View style={styles.mealInfo}>
+                      <Text style={styles.mealName}>{itemSummary || "Meal"}</Text>
+                      <Text style={styles.mealDetails}>
+                        {totalCalories} kcal • {meal.capturedAt.toLocaleTimeString()}
+                      </Text>
+                      <Text style={styles.macroLine}>
+                        P {Math.round(macros.protein)}g · C {Math.round(macros.carbs)}g · F {Math.round(macros.fat)}g
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
             })
           )}
         </View>
@@ -491,6 +498,11 @@ export default function MealsTab() {
         onConfirm={confirmMeal}
         onCancel={cancelMeal}
       />
+      <ViewMealModal
+      visible={!!selectedMeal}
+      meal={selectedMeal}
+      onClose={() => setSelectedMeal(null)}
+    />
     </SafeAreaView>
   );
 }

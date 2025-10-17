@@ -15,7 +15,7 @@ type Props = {
   visible: boolean;
   meal: {
     id: string;
-    imageUri: string;
+    imageUri: string | null;
     analysis: MealAnalysisResponse;
   } | null;
   onConfirm: () => void;
@@ -23,7 +23,7 @@ type Props = {
 };
 
 export default function MealModal({ visible, meal, onConfirm, onCancel }: Props) {
-  if (!meal) return null;
+  if (!meal || !visible) return null;
 
   const { analysis } = meal;
   const totalCalories = Math.round(analysis.calories_total);
@@ -32,7 +32,20 @@ export default function MealModal({ visible, meal, onConfirm, onCancel }: Props)
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
       <View style={styles.overlay}>
         <View style={styles.content}>
-          <Image source={{ uri: meal.imageUri }} style={styles.image} />
+          {/* image (safe for string | null) */}
+          {meal.imageUri ? (
+            <Image source={{ uri: meal.imageUri }} style={styles.image} />
+          ) : (
+            <View
+              style={[
+                styles.image,
+                { backgroundColor: "#f3f4f6", alignItems: "center", justifyContent: "center" },
+              ]}
+            >
+              <Ionicons name="image-outline" size={36} color="#9ca3af" />
+            </View>
+          )}
+
           <Text style={styles.title}>Estimated Total</Text>
           <Text style={styles.totalCalories}>{totalCalories} kcal</Text>
 
