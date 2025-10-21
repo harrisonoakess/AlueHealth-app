@@ -18,27 +18,28 @@ module.exports = {
       },
       colors: {
         primary: {
-          50: "#F4EAF8",
-          100: "#E9D8F0", // splash background
-          200: "#D6BDE8",
-          300: "#C19AD9",
-          400: "#9C72C2",
-          500: "#7B53A6",
-          600: "#5A3E85", // logo purple
-          700: "#452E66",
-          800: "#2E1F46",
-          900: "#1A0F26",
+          50:  "#FDF8FC",
+          100: "#FAEFF7",
+          200: "#F1D8EC", // your given pastel pink
+          300: "#EABFD9",
+          400: "#E09EC2",
+          500: "#D377AB",
+          600: "#BF5E93", // solid brand button bg
+          700: "#A34779",
+          800: "#833A60",
+          900: "#5C2743",
         },
         secondary: {
-          100: "#FAF5FF",
-          200: "#F3E8FF",
-          300: "#E9D5FF",
-          400: "#D8B4FE",
-          500: "#C084FC",
-          600: "#A855F7",
-          700: "#9333EA",
-          800: "#7E22CE",
-          900: "#6B21A8",
+          50:  "#F1ECFA",
+          100: "#E6DBF6",
+          200: "#D1C1EE",
+          300: "#B6A0E1",
+          400: "#9378C9",
+          500: "#7659AE",
+          600: "#5F4490", // your given purple
+          700: "#4E3975",
+          800: "#3E2E5D",
+          900: "#2E2244",
         },
         neutral: {
           100: "#F8F9FA",
