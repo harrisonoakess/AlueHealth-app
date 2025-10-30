@@ -15,12 +15,19 @@ type Article = {
 const CATEGORIES = ["All", "Nutrition", "Mind", "Body", "Milk & Hormones", "Rest"] as const;
 
 const ALL_ARTICLES: Article[] = [
+  // {
+  //   title: "Iron-Rich Foods for Recovery",
+  //   preview: "Essential nutrients to support your postpartum healing and energy levels.",
+  //   image: "🥗",
+  //   category: "Nutrition",
+  //   to: "/(root)/(tabs)/library/ironRichFoods",
+  // },
   {
-    title: "Iron-Rich Foods for Recovery",
-    preview: "Essential nutrients to support your postpartum healing and energy levels.",
-    image: "🥗",
+    title: "Healing Foods & Recipes",
+    preview: "Nourishing meals and simple recipes that support your postpartum recovery.",
+    image: "🥘",
     category: "Nutrition",
-    to: "/(root)/(tabs)/library/breathing",
+    to: "/(root)/(tabs)/library/healingFoods",
   },
   {
     title: "Breathing Through Anxiety",
@@ -30,11 +37,25 @@ const ALL_ARTICLES: Article[] = [
     to: "/(root)/(tabs)/library/breathing",
   },
   {
+    title: "Managing Postpartum Mood",
+    preview: "Understanding and navigating the emotional waves of early motherhood.",
+    image: "🌸",
+    category: "Mind",
+    to: "/(root)/(tabs)/library/postpartumMood",
+  },
+  {
     title: "Gentle Core Recovery",
     preview: "Safe exercises to reconnect with your core after delivery.",
     image: "💪",
     category: "Body",
     to: "/(root)/(tabs)/library/coreRecovery",
+  },
+  {
+    title: "Pelvic Floor Recovery",
+    preview: "Gentle healing and strengthening for your pelvic floor after birth.",
+    image: "🌺",
+    category: "Body",
+    to: "/(root)/(tabs)/library/pelvicFloor",
   },
   {
     title: "Understanding Milk Supply",
@@ -43,14 +64,29 @@ const ALL_ARTICLES: Article[] = [
     category: "Milk & Hormones",
     to: "/(root)/(tabs)/library/milk",
   },
+  // {
+  //   title: "Hormone Shifts Explained",
+  //   preview: "Understanding the hormonal roller coaster after birth and how to support balance.",
+  //   image: "⚡",
+  //   category: "Milk & Hormones",
+  //   to: "/(root)/(tabs)/library/hormoneShifts",
+  // },
   {
-    title: "Rest & Sleep Recovery",
-    preview: "Prioritizing rest and sleep stategies to support your postpartum healing",
+    title: "Rest & Sleep for Recovery",
+    preview: "Prioritizing rest and sleep strategies to support your postpartum healing.",
     image: "🌙",
     category: "Rest",
     to: "/(root)/(tabs)/library/restAndSleep",
   },
+  {
+    title: "Creating a Sleep Routine",
+    preview: "Practical strategies to improve sleep quality during the postpartum period.",
+    image: "💤",
+    category: "Rest",
+    to: "/(root)/(tabs)/library/sleepRoutine",
+  },
 ];
+
 
 export default function LibraryIndex() {
   const [activeCategory, setActiveCategory] = useState<(typeof CATEGORIES)[number]>("All");
