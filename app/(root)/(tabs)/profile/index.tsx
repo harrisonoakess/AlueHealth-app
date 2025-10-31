@@ -1,4 +1,4 @@
-// app/(root)/(tabs)/profile.tsx
+// app/(root)/(tabs)/profile/index.tsx
 import React from "react";
 import {
   View,
@@ -31,11 +31,13 @@ type MenuItem = {
 
 export default function Profile() {
   const menuItems: MenuItem[] = [
-    { icon: User, label: "Edit Profile", to: "/(root)/(tabs)/edit-profile" as Href },
-    { icon: Bell, label: "Notifications", to: "/(root)/(tabs)/notifications" as Href },
-    { icon: Settings, label: "App Settings", to: "/(root)/(tabs)/settings" as Href },
-    { icon: HelpCircle, label: "Support", to: "/(root)/(tabs)/support" as Href },
-    { icon: LogOut, label: "Log Out", to: "/(root)/(tabs)/logout" as Href, danger: true },
+    { icon: User, label: "Edit Profile", to: "/(root)/(tabs)/profile/editProfile" as Href },
+    { icon: Bell, label: "Notifications", to: "/(root)/(tabs)/profile/notifications" as Href },
+    { icon: Settings, label: "App Settings", to: "/(root)/(tabs)/profile/settings" as Href },
+    { icon: HelpCircle, label: "Support", to: "/(root)/(tabs)/profile/support" as Href },
+    { icon: LogOut, label: "Log Out", to: "/(root)/(tabs)/profile/logout" as Href, danger: true },
+    { icon: LogOut, label: "Pricing", to: "/(root)/(tabs)/profile/pricing" as Href,},
+
   ];
 
   // Replace with real user data

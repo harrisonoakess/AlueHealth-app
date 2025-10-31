@@ -5,7 +5,7 @@ export default function TabsLayout() {
   return (
     <Tabs screenOptions={{ headerShown: false }}>
       <Tabs.Screen
-        name="checkin"
+        name="checkIn"
         options={{
           title: "Check-In",
           tabBarIcon: ({ color, size }) => (

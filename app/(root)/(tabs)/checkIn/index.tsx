@@ -1,4 +1,4 @@
-// app/(root)/(tabs)/checkin.tsx
+// app/(root)/(tabs)/checkIn/index.tsx
 import React, { useState } from "react";
 import {
   View,
@@ -11,8 +11,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Slider from "@react-native-community/slider"; // ➜ expo install @react-native-community/slider
+import { useRouter } from "expo-router";
 
 export default function CheckIn() {
+  const router = useRouter();
+
   const [sleep, setSleep] = useState<number | null>(null);
   const [energy, setEnergy] = useState<number>(5);
   const [mood, setMood] = useState<string | null>(null);
@@ -24,6 +27,10 @@ export default function CheckIn() {
     Alert.alert("Nice job 💕", "Your day is logged.");
   };
 
+  const goHistory = () => {
+    router.push("/(root)/(tabs)/checkIn/checkInHistory");
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#F8F9FB" }}>
       <ScrollView
@@ -32,9 +39,25 @@ export default function CheckIn() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <View style={{ marginBottom: 24 }}>
-          <Text style={styles.title}>Let's check in 💗</Text>
-          <Text style={styles.subtitle}>Answer a few quick questions.</Text>
+        <View style={[styles.headerRow, { marginBottom: 24 }]}>
+          <View>
+            <Text style={styles.title}>Let's check in 💗</Text>
+            <Text style={styles.subtitle}>Answer a few quick questions.</Text>
+          </View>
+
+          {/* View History button */}
+          <Pressable
+            onPress={goHistory}
+            style={({ pressed }) => [
+              styles.historyBtn,
+              { opacity: pressed ? 0.85 : 1 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="View check-in history"
+            testID="view-history-button"
+          >
+            <Text style={styles.historyText}>View History</Text>
+          </Pressable>
         </View>
 
         {/* Sleep */}
@@ -109,7 +132,12 @@ export default function CheckIn() {
         </Card>
 
         {/* Save */}
-        <Pressable onPress={handleSave} style={({ pressed }) => [styles.saveBtn, { opacity: pressed ? 0.85 : 1 }]}>
+        <Pressable
+          onPress={handleSave}
+          style={({ pressed }) => [styles.saveBtn, { opacity: pressed ? 0.85 : 1 }]}
+          accessibilityRole="button"
+          accessibilityLabel="Save check-in"
+        >
           <Text style={styles.saveText}>Save Check-In</Text>
         </Pressable>
       </ScrollView>
@@ -138,8 +166,24 @@ function Card({
 
 /** ---- Styles ---- */
 const styles = StyleSheet.create({
+  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+
   title: { fontSize: 28, fontWeight: "700", color: "#111827", marginBottom: 6 },
   subtitle: { fontSize: 16, color: "#6B7280" },
+
+  historyBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 1 },
+    }),
+  },
+  historyText: { color: "#7B53A6", fontWeight: "700", fontSize: 13 },
 
   card: {
     borderWidth: 2,
