@@ -1,5 +1,5 @@
 // app/(root)/(tabs)/profile/index.tsx
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import {
   HelpCircle,
   LogOut,
 } from "lucide-react-native";
+import { supabase } from "../../../../lib/supabase";
 
 type IconProps = { size?: number; color?: string };
 type IconType = React.ComponentType<IconProps>;
@@ -30,6 +31,104 @@ type MenuItem = {
 };
 
 export default function Profile() {
+  const [profileName, setProfileName] = useState<string | null>(null);
+  const [joinedAt, setJoinedAt] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadProfile = async () => {
+      try {
+        setLoadingProfile(true);
+
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) throw userError;
+
+        if (!user) {
+          if (active) {
+            setProfileName(null);
+            setJoinedAt(null);
+            setUserEmail(null);
+          }
+          return;
+        }
+
+        if (active) {
+          setUserEmail(user.email ?? null);
+        }
+
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("full_name, created_at")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (!active) return;
+
+        const nameFromProfile = data?.full_name?.trim() ?? null;
+        const nameFromMetadata = typeof user.user_metadata?.full_name === "string"
+          ? user.user_metadata.full_name.trim()
+          : null;
+
+        setProfileName(nameFromProfile || nameFromMetadata || null);
+        setJoinedAt(data?.created_at ?? user.created_at ?? null);
+      } catch (error) {
+        console.error("Failed to load profile information", error);
+        if (active) {
+          setProfileName(null);
+          setJoinedAt(null);
+        }
+      } finally {
+        if (active) {
+          setLoadingProfile(false);
+        }
+      }
+    };
+
+    void loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const resolvedName = useMemo(() => {
+    if (loadingProfile) return "Loading...";
+    const preferred = profileName?.trim();
+    if (preferred) return preferred;
+    if (userEmail) return userEmail;
+    return "Welcome back";
+  }, [loadingProfile, profileName, userEmail]);
+
+  const initials = useMemo(() => {
+    const source = profileName?.trim() || userEmail?.trim() || "";
+    if (!source) return "AL";
+    const parts = source.split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "AL";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }, [profileName, userEmail]);
+
+  const joined = useMemo(() => {
+    if (loadingProfile) return "Fetching account info...";
+    if (!joinedAt) return "Joined recently";
+    const parsed = new Date(joinedAt);
+    if (Number.isNaN(parsed.getTime())) return "Joined recently";
+    const formatted = new Intl.DateTimeFormat(undefined, {
+      month: "long",
+      year: "numeric",
+    }).format(parsed);
+    return `Joined ${formatted}`;
+  }, [joinedAt, loadingProfile]);
+
   const menuItems: MenuItem[] = [
     { icon: User, label: "Edit Profile", to: "/(root)/(tabs)/profile/editProfile" as Href },
     { icon: Bell, label: "Notifications", to: "/(root)/(tabs)/profile/notifications" as Href },
@@ -39,11 +138,6 @@ export default function Profile() {
     { icon: LogOut, label: "Pricing", to: "/(root)/(tabs)/profile/pricing" as Href,},
 
   ];
-
-  // Replace with real user data
-  const initials = "EJ";
-  const name = "Emma Johnson";
-  const joined = "Joined June 2025";
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#F8F9FB" }}>
@@ -58,7 +152,7 @@ export default function Profile() {
               <Text style={styles.avatarText}>{initials}</Text>
             </View>
           </View>
-          <Text style={styles.name}>{name}</Text>
+          <Text style={styles.name}>{resolvedName}</Text>
           <Text style={styles.joined}>{joined}</Text>
         </View>
 

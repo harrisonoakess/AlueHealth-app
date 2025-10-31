@@ -1,5 +1,5 @@
-// app/(root)/(tabs)/editProfile.tsx
-import React, { useMemo, useRef, useState } from "react";
+// app/(root)/(tabs)/profile/editProfile.tsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -14,33 +14,156 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Camera } from "lucide-react-native";
+import { supabase } from "../../../../lib/supabase";
+
+type ProfileRecord = {
+  id: string;
+  full_name: string | null;
+  date_of_birth: string | null;
+  due_date: string | null;
+  created_at: string | null;
+};
 
 export default function EditProfile() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    firstName: "Emma",
-    lastName: "Johnson",
-    email: "emma.johnson@email.com",
-    phone: "+1 (555) 123-4567",
-    dueDate: "2025-06-15", // YYYY-MM-DD
+    fullName: "",
+    email: "",
+    phone: "",
+    dueDate: "",
+    dateOfBirth: "",
   });
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const lastNameRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
   const dueDateRef = useRef<TextInput>(null);
+  const dobRef = useRef<TextInput>(null);
 
   const initials = useMemo(() => {
-    const a = formData.firstName?.[0] ?? "";
-    const b = formData.lastName?.[0] ?? "";
-    return `${a}${b}`.toUpperCase() || "👤";
-  }, [formData.firstName, formData.lastName]);
+    const trimmed = formData.fullName.trim();
+    if (!trimmed) return "👤";
+    const parts = trimmed.split(/\s+/).filter(Boolean);
+    if (parts.length === 1) {
+      return parts[0].slice(0, 2).toUpperCase();
+    }
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }, [formData.fullName]);
 
-  const onSave = () => {
-    // TODO: persist to backend here
-    Alert.alert("Profile updated", "Your profile has been successfully updated.", [
-      { text: "OK", onPress: () => router.replace("/(root)/(tabs)/profile") },
-    ]);
+  useEffect(() => {
+    let active = true;
+
+    const loadProfile = async () => {
+      try {
+        setLoading(true);
+
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) throw userError;
+
+        if (!user) {
+          if (active) {
+            setProfileId(null);
+          }
+          return;
+        }
+
+        if (active) {
+          setProfileId(user.id);
+          setFormData((prev) => ({
+            ...prev,
+            email: user.email ?? prev.email,
+            phone:
+              (typeof user.user_metadata?.phone === "string" && user.user_metadata.phone) ||
+              prev.phone,
+          }));
+        }
+
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id, full_name, date_of_birth, due_date, created_at")
+          .eq("id", user.id)
+          .maybeSingle<ProfileRecord>();
+
+        if (error) throw error;
+        if (!active) return;
+
+        if (data) {
+          setFormData({
+            fullName: data.full_name ?? "",
+            email: user.email ?? "",
+            phone:
+              (typeof user.user_metadata?.phone === "string" && user.user_metadata.phone) || "",
+            dueDate: data.due_date ?? "",
+            dateOfBirth: data.date_of_birth ?? "",
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load profile", error);
+        if (active) {
+          Alert.alert("Error", "Unable to load your profile right now. Please try again later.");
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const onSave = async () => {
+    if (!profileId) {
+      Alert.alert("Not signed in", "We could not find your account. Please sign in again.");
+      return;
+    }
+
+    const trimmedFullName = formData.fullName.trim();
+    const trimmedPhone = formData.phone.trim();
+    const trimmedDueDate = formData.dueDate.trim();
+    const trimmedDob = formData.dateOfBirth.trim();
+
+    const payload = {
+      id: profileId,
+      full_name: trimmedFullName || null,
+      due_date: trimmedDueDate || null,
+      date_of_birth: trimmedDob || null,
+    };
+
+    try {
+      setSaving(true);
+
+      const { error } = await supabase.from("profiles").upsert(payload, { onConflict: "id" });
+      if (error) throw error;
+
+      const { error: authError } = await supabase.auth.updateUser({
+        email: formData.email || undefined,
+        data: {
+          full_name: trimmedFullName || undefined,
+          phone: trimmedPhone || undefined,
+        },
+      });
+      if (authError) throw authError;
+
+      Alert.alert("Profile updated", "Your profile has been successfully updated.", [
+        { text: "OK", onPress: () => router.replace("/(root)/(tabs)/profile") },
+      ]);
+    } catch (error) {
+      console.error("Failed to save profile", error);
+      Alert.alert("Save failed", error instanceof Error ? error.message : "Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const openAvatarPicker = () => {
@@ -89,28 +212,14 @@ export default function EditProfile() {
           <View style={styles.card}>
             {/* First Name */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>First Name</Text>
+              <Text style={styles.label}>Full Name</Text>
               <TextInput
                 style={styles.input}
-                value={formData.firstName}
-                onChangeText={(t) => setFormData((s) => ({ ...s, firstName: t }))}
-                returnKeyType="next"
-                onSubmitEditing={() => lastNameRef.current?.focus()}
-                accessibilityLabel="First Name"
-              />
-            </View>
-
-            {/* Last Name */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Last Name</Text>
-              <TextInput
-                ref={lastNameRef}
-                style={styles.input}
-                value={formData.lastName}
-                onChangeText={(t) => setFormData((s) => ({ ...s, lastName: t }))}
+                value={formData.fullName}
+                onChangeText={(t) => setFormData((s) => ({ ...s, fullName: t }))}
                 returnKeyType="next"
                 onSubmitEditing={() => emailRef.current?.focus()}
-                accessibilityLabel="Last Name"
+                accessibilityLabel="Full Name"
               />
             </View>
 
@@ -126,6 +235,7 @@ export default function EditProfile() {
                 textContentType="emailAddress"
                 value={formData.email}
                 onChangeText={(t) => setFormData((s) => ({ ...s, email: t }))}
+                editable={!loading && !saving}
                 returnKeyType="next"
                 onSubmitEditing={() => phoneRef.current?.focus()}
                 accessibilityLabel="Email"
@@ -143,9 +253,26 @@ export default function EditProfile() {
                 textContentType="telephoneNumber"
                 value={formData.phone}
                 onChangeText={(t) => setFormData((s) => ({ ...s, phone: t }))}
+                editable={!saving}
+                returnKeyType="next"
+                onSubmitEditing={() => dobRef.current?.focus()}
+                accessibilityLabel="Phone Number"
+              />
+            </View>
+
+            {/* Date of Birth */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Date of Birth</Text>
+              <TextInput
+                ref={dobRef}
+                style={styles.input}
+                placeholder="YYYY-MM-DD"
+                value={formData.dateOfBirth}
+                onChangeText={(t) => setFormData((s) => ({ ...s, dateOfBirth: t }))}
+                editable={!saving}
                 returnKeyType="next"
                 onSubmitEditing={() => dueDateRef.current?.focus()}
-                accessibilityLabel="Phone Number"
+                accessibilityLabel="Date of Birth"
               />
             </View>
 
@@ -158,6 +285,7 @@ export default function EditProfile() {
                 placeholder="YYYY-MM-DD"
                 value={formData.dueDate}
                 onChangeText={(t) => setFormData((s) => ({ ...s, dueDate: t }))}
+                editable={!saving}
                 returnKeyType="done"
                 accessibilityLabel="Due or Birth Date"
               />
@@ -170,11 +298,12 @@ export default function EditProfile() {
           {/* Save Button */}
           <TouchableOpacity
             onPress={onSave}
+            disabled={saving || loading}
             style={styles.saveBtn}
             accessibilityRole="button"
             accessibilityLabel="Save Changes"
           >
-            <Text style={styles.saveText}>Save Changes</Text>
+            <Text style={styles.saveText}>{saving ? "Saving..." : "Save Changes"}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
