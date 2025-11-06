@@ -1,5 +1,5 @@
 // app/(root)/(tabs)/profile/index.tsx
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   Pressable,
   ScrollView,
   Platform,
+  RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Link, type Href } from "expo-router";
@@ -18,6 +20,7 @@ import {
   HelpCircle,
   LogOut,
 } from "lucide-react-native";
+import { useProfile } from "../../../../lib/hooks/useProfile";
 
 type IconProps = { size?: number; color?: string };
 type IconType = React.ComponentType<IconProps>;
@@ -30,6 +33,8 @@ type MenuItem = {
 };
 
 export default function Profile() {
+  const { profile, user, loading, error, refresh, refreshing } = useProfile();
+
   const menuItems: MenuItem[] = [
     { icon: User, label: "Edit Profile", to: "/(root)/(tabs)/profile/editProfile" as Href },
     { icon: Bell, label: "Notifications", to: "/(root)/(tabs)/profile/notifications" as Href },
@@ -40,16 +45,39 @@ export default function Profile() {
 
   ];
 
-  // Replace with real user data
-  const initials = "EJ";
-  const name = "Emma Johnson";
-  const joined = "Joined June 2025";
+  const initials = useMemo(() => {
+    const name = profile?.full_name ?? user?.email ?? "";
+    if (!name) return "👤";
+    const parts = name.trim().split(/\s+/);
+    if (!parts.length) return "👤";
+    const first = parts[0]?.[0] ?? "";
+    const second = parts.length > 1 ? parts[parts.length - 1][0] ?? "" : "";
+    return `${first}${second}`.toUpperCase();
+  }, [profile?.full_name, user?.email]);
+
+  const displayName = profile?.full_name || user?.email || "Set up your profile";
+
+  const joined = useMemo(() => {
+    if (!user?.created_at) return "Joined recently";
+    const date = new Date(user.created_at);
+    if (Number.isNaN(date.getTime())) return "Joined recently";
+    return `Joined ${date.toLocaleString("default", { month: "long", year: "numeric" })}`;
+  }, [user?.created_at]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#F8F9FB", alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator size="large" color="#6C63FF" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#F8F9FB" }}>
       <ScrollView
         contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
       >
         {/* Header / Avatar */}
         <View style={{ alignItems: "center", marginBottom: 24 }}>
@@ -58,8 +86,9 @@ export default function Profile() {
               <Text style={styles.avatarText}>{initials}</Text>
             </View>
           </View>
-          <Text style={styles.name}>{name}</Text>
+          <Text style={styles.name}>{displayName}</Text>
           <Text style={styles.joined}>{joined}</Text>
+          {!!error && <Text style={styles.errorText}>{error}</Text>}
         </View>
 
         {/* Menu — soft opacity/tint rows */}
@@ -154,4 +183,5 @@ const styles = StyleSheet.create({
   // Typography (kept your sizes)
   label: { fontSize: 25, fontWeight: "300" },
   version: { textAlign: "center", marginTop: 24, fontSize: 12, color: "#6B7280" },
+  errorText: { marginTop: 8, color: "#ef4444" },
 });
