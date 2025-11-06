@@ -1,6 +1,5 @@
 // app/(root)/(tabs)/profile/index.tsx
 import React, { useMemo } from "react";
-import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -22,7 +21,6 @@ import {
   LogOut,
 } from "lucide-react-native";
 import { useProfile } from "../../../../lib/hooks/useProfile";
-import { supabase } from "../../../../lib/supabase";
 
 type IconProps = { size?: number; color?: string };
 type IconType = React.ComponentType<IconProps>;
@@ -30,110 +28,12 @@ type IconType = React.ComponentType<IconProps>;
 type MenuItem = {
   icon: IconType;
   label: string;
-  to: Href;          // make sure these paths exist in your app
+  to: Href;
   danger?: boolean;
 };
 
 export default function Profile() {
   const { profile, user, loading, error, refresh, refreshing } = useProfile();
-
-  const [profileName, setProfileName] = useState<string | null>(null);
-  const [joinedAt, setJoinedAt] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-
-    const loadProfile = async () => {
-      try {
-        setLoadingProfile(true);
-
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (userError) throw userError;
-
-        if (!user) {
-          if (active) {
-            setProfileName(null);
-            setJoinedAt(null);
-            setUserEmail(null);
-          }
-          return;
-        }
-
-        if (active) {
-          setUserEmail(user.email ?? null);
-        }
-
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("full_name, created_at")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (error) throw error;
-
-        if (!active) return;
-
-        const nameFromProfile = data?.full_name?.trim() ?? null;
-        const nameFromMetadata = typeof user.user_metadata?.full_name === "string"
-          ? user.user_metadata.full_name.trim()
-          : null;
-
-        setProfileName(nameFromProfile || nameFromMetadata || null);
-        setJoinedAt(data?.created_at ?? user.created_at ?? null);
-      } catch (error) {
-        console.error("Failed to load profile information", error);
-        if (active) {
-          setProfileName(null);
-          setJoinedAt(null);
-        }
-      } finally {
-        if (active) {
-          setLoadingProfile(false);
-        }
-      }
-    };
-
-    void loadProfile();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const resolvedName = useMemo(() => {
-    if (loadingProfile) return "Loading...";
-    const preferred = profileName?.trim();
-    if (preferred) return preferred;
-    if (userEmail) return userEmail;
-    return "Welcome back";
-  }, [loadingProfile, profileName, userEmail]);
-
-  const initials = useMemo(() => {
-    const source = profileName?.trim() || userEmail?.trim() || "";
-    if (!source) return "AL";
-    const parts = source.split(/\s+/).filter(Boolean);
-    if (parts.length === 0) return "AL";
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }, [profileName, userEmail]);
-
-  const joined = useMemo(() => {
-    if (loadingProfile) return "Fetching account info...";
-    if (!joinedAt) return "Joined recently";
-    const parsed = new Date(joinedAt);
-    if (Number.isNaN(parsed.getTime())) return "Joined recently";
-    const formatted = new Intl.DateTimeFormat(undefined, {
-      month: "long",
-      year: "numeric",
-    }).format(parsed);
-    return `Joined ${formatted}`;
-  }, [joinedAt, loadingProfile]);
 
   const menuItems: MenuItem[] = [
     { icon: User, label: "Edit Profile", to: "/(root)/(tabs)/profile/editProfile" as Href },
@@ -141,21 +41,18 @@ export default function Profile() {
     { icon: Settings, label: "App Settings", to: "/(root)/(tabs)/profile/settings" as Href },
     { icon: HelpCircle, label: "Support", to: "/(root)/(tabs)/profile/support" as Href },
     { icon: LogOut, label: "Log Out", to: "/(root)/(tabs)/profile/logout" as Href, danger: true },
-    { icon: LogOut, label: "Pricing", to: "/(root)/(tabs)/profile/pricing" as Href,},
-
+    { icon: LogOut, label: "Pricing", to: "/(root)/(tabs)/profile/pricing" as Href },
   ];
 
   const initials = useMemo(() => {
     const name = profile?.full_name ?? user?.email ?? "";
-    if (!name) return "👤";
+    if (!name.trim()) return "👤";
     const parts = name.trim().split(/\s+/);
-    if (!parts.length) return "👤";
-    const first = parts[0]?.[0] ?? "";
-    const second = parts.length > 1 ? parts[parts.length - 1][0] ?? "" : "";
-    return `${first}${second}`.toUpperCase();
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
   }, [profile?.full_name, user?.email]);
 
-  const displayName = profile?.full_name || user?.email || "Set up your profile";
+  const displayName = profile?.full_name?.trim() || user?.email || "Set up your profile";
 
   const joined = useMemo(() => {
     if (!user?.created_at) return "Joined recently";
@@ -166,7 +63,7 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#F8F9FB", alignItems: "center", justifyContent: "center" }}>
+      <SafeAreaView style={styles.loadingSafe}>
         <ActivityIndicator size="large" color="#6C63FF" />
       </SafeAreaView>
     );
@@ -187,12 +84,11 @@ export default function Profile() {
             </View>
           </View>
           <Text style={styles.name}>{displayName}</Text>
-          <Text style={styles.name}>{resolvedName}</Text>
           <Text style={styles.joined}>{joined}</Text>
           {!!error && <Text style={styles.errorText}>{error}</Text>}
         </View>
 
-        {/* Menu — soft opacity/tint rows */}
+        {/* Menu */}
         <View style={{ gap: 40 }}>
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -219,9 +115,7 @@ export default function Profile() {
                   <View style={styles.rowBetween}>
                     <View style={styles.row}>
                       <Icon size={22} color={iconColor} />
-                      <Text style={[styles.label, { color: labelColor }]}>
-                        {item.label}
-                      </Text>
+                      <Text style={[styles.label, { color: labelColor }]}>{item.label}</Text>
                     </View>
                     <ChevronRight size={20} color={chevColor} />
                   </View>
@@ -238,6 +132,7 @@ export default function Profile() {
 }
 
 const styles = StyleSheet.create({
+  loadingSafe: { flex: 1, backgroundColor: "#F8F9FB", alignItems: "center", justifyContent: "center" },
   // Avatar
   avatarRing: {
     width: 96,
@@ -264,12 +159,12 @@ const styles = StyleSheet.create({
   name: { fontSize: 22, fontWeight: "600", color: "#111827" },
   joined: { marginTop: 4, color: "#6B7280" },
 
-  // Opacity row (replaces the old 'card' style)
+  // Opacity row
   opacityRow: {
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    borderWidth: 1,                 // keep a faint edge; set to 0 or "transparent" to remove
+    borderWidth: 1,
     borderColor: "rgba(0,0,0,0.06)",
     ...Platform.select({
       ios: { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 5, shadowOffset: { width: 0, height: 3 } },
@@ -277,11 +172,9 @@ const styles = StyleSheet.create({
     }),
   },
 
-  // Row layout
   row: { flexDirection: "row", alignItems: "center", gap: 15 },
   rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
 
-  // Typography (kept your sizes)
   label: { fontSize: 25, fontWeight: "300" },
   version: { textAlign: "center", marginTop: 24, fontSize: 12, color: "#6B7280" },
   errorText: { marginTop: 8, color: "#ef4444" },
