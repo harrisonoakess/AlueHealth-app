@@ -366,6 +366,15 @@ export default function MealsTab() {
     }
   };
 
+  const normaliseTimestamp = (value: string | null | undefined): string => {
+    if (!value) return new Date().toISOString();
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return new Date().toISOString();
+    }
+    return parsed.toISOString();
+  };
+
   const confirmMeal = async () => {
     if (!pendingMeal) return;
     try {
@@ -378,7 +387,15 @@ export default function MealsTab() {
       if (!pendingMeal.imageUri) throw new Error("Meal image is missing");
       const { path, mime } = await uploadMealImage(accountId, mealIdForFile, pendingMeal.imageUri);
 
-      await saveMealToDb(accountId, pendingMeal.analysis, path, mime);
+      await saveMealToDb(
+        accountId,
+        {
+          ...pendingMeal.analysis,
+          timestamp_iso: normaliseTimestamp(pendingMeal.analysis.timestamp_iso),
+        },
+        path,
+        mime,
+      );
       await loadExistingMeals();
       setPendingMeal(null);
       setShowModal(false);
