@@ -89,13 +89,13 @@ export default function MealModal({ visible, meal, onConfirm, onCancel }: Props)
           </ScrollView>
 
           <TouchableOpacity style={[styles.button, styles.primary]} onPress={onConfirm}>
-            <Ionicons name="checkmark-circle" size={20} color="#fff" />
-            <Text style={styles.buttonText}>Track Calories & Store Meal</Text>
+            <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+            <Text style={[styles.buttonText, styles.buttonTextPrimary]}>Track Calories & Store Meal</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.button, styles.secondary]} onPress={onCancel}>
-            <Ionicons name="close-circle" size={20} color="#3b82f6" />
-            <Text style={[styles.buttonText, { color: "#3b82f6" }]}>Try Again</Text>
+            <Ionicons name="close-circle" size={20} color="#7B53A6" />
+            <Text style={[styles.buttonText, styles.buttonTextSecondary]}>Try Again</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -111,11 +111,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   content: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    width: "85%",
+    width: "90%",
     maxHeight: "85%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 28,
+    padding: 24,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#E5E7EB",
+    shadowColor: "#7B53A6",
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 6,
   },
   image: {
     width: 120,
@@ -124,8 +131,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     alignSelf: "center",
   },
-  title: { fontSize: 18, fontWeight: "700", marginBottom: 4, textAlign: "center" },
-  totalCalories: { fontSize: 16, color: "#1f2937", marginBottom: 12, textAlign: "center" },
+  title: { fontSize: 18, fontWeight: "700", marginBottom: 4, textAlign: "center", color: "#7B53A6" },
+  totalCalories: { fontSize: 16, color: "#1F2937", marginBottom: 12, textAlign: "center" },
   scrollArea: { width: "100%", marginBottom: 16 },
   sectionTitle: { fontSize: 14, fontWeight: "600", marginBottom: 6, color: "#111827" },
   itemRow: {
@@ -139,14 +146,19 @@ const styles = StyleSheet.create({
   itemDetails: { fontSize: 12, color: "#4b5563", marginTop: 2 },
   macrosText: { fontSize: 12, color: "#6b7280", marginTop: 2 },
   confidencePill: {
-    backgroundColor: "#f3f4f6",
+    backgroundColor: "rgba(123, 83, 166, 0.12)",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
     marginLeft: 12,
   },
-  confidenceText: { fontSize: 12, fontWeight: "600", color: "#1f2937" },
-  infoBlock: { marginTop: 12 },
+  confidenceText: { fontSize: 12, fontWeight: "600", color: "#7B53A6" },
+  infoBlock: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "#F7F2FB",
+  },
   infoText: { fontSize: 12, color: "#4b5563", lineHeight: 16 },
   button: {
     flexDirection: "row",
@@ -158,7 +170,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 10,
   },
-  primary: { backgroundColor: "#3b82f6" },
-  secondary: { backgroundColor: "#f3f4f6", borderWidth: 1, borderColor: "#d1d5db" },
-  buttonText: { fontSize: 14, fontWeight: "600", color: "#fff" },
+  primary: {
+    backgroundColor: "#7B53A6",
+    shadowColor: "#7B53A6",
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  secondary: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  buttonText: { fontSize: 14, fontWeight: "700" },
+  buttonTextPrimary: { color: "#FFFFFF" },
+  buttonTextSecondary: { color: "#7B53A6" },
 });
