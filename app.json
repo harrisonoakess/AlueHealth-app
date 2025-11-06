@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "postpartum",
-    "slug": "postpartum",
+    "name": "AlueHealth",
+    "slug": "aluehealth",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/postpartum-app_splash.png",
-    "scheme": "postpartum",
+    "scheme": "aluehealth",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -15,7 +15,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.postpartum"
+      "bundleIdentifier": "com.aluehealth.app",         
+      "buildNumber": "1",                               
+      "infoPlist": {
+        "NSCameraUsageDescription": "We use the camera to capture meal photos.",
+        "NSPhotoLibraryUsageDescription": "We access your photo library so you can upload meal images.",
+        "NSMicrophoneUsageDescription": "Microphone is used for optional voice notes.",
+        "ITSAppUsesNonExemptEncryption": false           
+      }
     },
     "android": {
       "adaptiveIcon": {

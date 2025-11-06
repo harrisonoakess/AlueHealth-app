@@ -1,7 +1,8 @@
-// app/(root)/(tabs)/profile/editProfile.tsx
+// app/(root)/(tabs)/editProfile.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,24 +15,18 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Camera } from "lucide-react-native";
-import { supabase } from "../../../../lib/supabase";
-
-type ProfileRecord = {
-  id: string;
-  full_name: string | null;
-  date_of_birth: string | null;
-  due_date: string | null;
-  created_at: string | null;
-};
+import { useProfile } from "../../../../lib/hooks/useProfile";
 
 export default function EditProfile() {
   const router = useRouter();
+  const { profile, loading, saving, error, updateProfile } = useProfile();
   const [formData, setFormData] = useState({
-    fullName: "",
+    firstName: "",
+    lastName: "",
     email: "",
     phone: "",
     dueDate: "",
-    dateOfBirth: "",
+    dob: "",
   });
   const [profileId, setProfileId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,6 +36,21 @@ export default function EditProfile() {
   const phoneRef = useRef<TextInput>(null);
   const dueDateRef = useRef<TextInput>(null);
   const dobRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (!profile) return;
+    const parts = (profile.full_name ?? "").trim().split(/\s+/).filter(Boolean);
+    const firstName = parts[0] ?? "";
+    const lastName = parts.length > 1 ? parts.slice(1).join(" ") : "";
+
+    setFormData((prev) => ({
+      ...prev,
+      firstName,
+      lastName,
+      dueDate: profile.due_date ?? "",
+      dob: profile.date_of_birth ?? "",
+    }));
+  }, [profile]);
 
   const initials = useMemo(() => {
     const trimmed = formData.fullName.trim();
@@ -122,47 +132,41 @@ export default function EditProfile() {
     };
   }, []);
 
+  const validateDate = (value: string) => {
+    if (!value) return true;
+    return /^\d{4}-\d{2}-\d{2}$/.test(value);
+  };
+
   const onSave = async () => {
-    if (!profileId) {
-      Alert.alert("Not signed in", "We could not find your account. Please sign in again.");
+    if (!formData.firstName && !formData.lastName) {
+      Alert.alert("Missing name", "Please provide at least a first or last name.");
       return;
     }
 
-    const trimmedFullName = formData.fullName.trim();
-    const trimmedPhone = formData.phone.trim();
-    const trimmedDueDate = formData.dueDate.trim();
-    const trimmedDob = formData.dateOfBirth.trim();
+    if (!validateDate(formData.dob)) {
+      Alert.alert("Invalid DOB", "Use the YYYY-MM-DD format for your birth date.");
+      return;
+    }
 
-    const payload = {
-      id: profileId,
-      full_name: trimmedFullName || null,
-      due_date: trimmedDueDate || null,
-      date_of_birth: trimmedDob || null,
-    };
+    if (!validateDate(formData.dueDate)) {
+      Alert.alert("Invalid due date", "Use the YYYY-MM-DD format for your due date.");
+      return;
+    }
+
+    const fullName = `${formData.firstName} ${formData.lastName}`.trim();
 
     try {
-      setSaving(true);
-
-      const { error } = await supabase.from("profiles").upsert(payload, { onConflict: "id" });
-      if (error) throw error;
-
-      const { error: authError } = await supabase.auth.updateUser({
-        email: formData.email || undefined,
-        data: {
-          full_name: trimmedFullName || undefined,
-          phone: trimmedPhone || undefined,
-        },
+      await updateProfile({
+        full_name: fullName || null,
+        date_of_birth: formData.dob || null,
+        due_date: formData.dueDate || null,
       });
-      if (authError) throw authError;
 
       Alert.alert("Profile updated", "Your profile has been successfully updated.", [
         { text: "OK", onPress: () => router.replace("/(root)/(tabs)/profile") },
       ]);
-    } catch (error) {
-      console.error("Failed to save profile", error);
-      Alert.alert("Save failed", error instanceof Error ? error.message : "Please try again.");
-    } finally {
-      setSaving(false);
+    } catch (err: any) {
+      Alert.alert("Update failed", err?.message ?? "Unable to save your changes right now.");
     }
   };
 
@@ -170,6 +174,16 @@ export default function EditProfile() {
     // TODO: integrate expo-image-picker if desired
     Alert.alert("Change Photo", "Image picker coming soon.");
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.loader}>
+          <ActivityIndicator size="large" color="#7B53A6" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -267,9 +281,8 @@ export default function EditProfile() {
                 ref={dobRef}
                 style={styles.input}
                 placeholder="YYYY-MM-DD"
-                value={formData.dateOfBirth}
-                onChangeText={(t) => setFormData((s) => ({ ...s, dateOfBirth: t }))}
-                editable={!saving}
+                value={formData.dob}
+                onChangeText={(t) => setFormData((s) => ({ ...s, dob: t }))}
                 returnKeyType="next"
                 onSubmitEditing={() => dueDateRef.current?.focus()}
                 accessibilityLabel="Date of Birth"
@@ -298,13 +311,18 @@ export default function EditProfile() {
           {/* Save Button */}
           <TouchableOpacity
             onPress={onSave}
-            disabled={saving || loading}
-            style={styles.saveBtn}
+            disabled={saving}
+            style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
             accessibilityRole="button"
             accessibilityLabel="Save Changes"
           >
-            <Text style={styles.saveText}>{saving ? "Saving..." : "Save Changes"}</Text>
+            {saving ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.saveText}>Save Changes</Text>
+            )}
           </TouchableOpacity>
+          {!!error && <Text style={styles.errorText}>{error}</Text>}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -314,6 +332,7 @@ export default function EditProfile() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   safe: { flex: 1, backgroundColor: "#F4EAF8" },
+  loader: { flex: 1, alignItems: "center", justifyContent: "center" },
   container: {
     paddingHorizontal: 24,
     paddingTop: 12,
@@ -411,5 +430,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
   },
+  saveBtnDisabled: { opacity: 0.7 },
   saveText: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
+  errorText: { marginTop: 12, textAlign: "center", color: "#B91C1C" },
 });
