@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/postpartum-app_splash.png",
+      "image": "./assets/images/aluehealth-app_splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },

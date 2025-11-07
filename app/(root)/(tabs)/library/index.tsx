@@ -118,6 +118,7 @@ const ALL_ARTICLES: Article[] = [
 
 export default function LibraryIndex() {
   const [activeCategory, setActiveCategory] = useState<(typeof CATEGORIES)[number]>("All");
+  const [input, setInput] = useState("");
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -143,12 +144,19 @@ export default function LibraryIndex() {
 
       {/* Search */}
       <View className="relative mb-6">
-        <View className="absolute left-3 top-3">
+        <Pressable
+          onPress={() => setQuery(input)}
+          className="absolute left-3 top-3"
+          hitSlop={10}
+        >
           <Search size={18} color="#6b7280" />
-        </View>
+        </Pressable>
+
         <TextInput
-          value={query}
-          onChangeText={setQuery}
+          value={input}
+          onChangeText={setInput}
+          onSubmitEditing={() => setQuery(input)} // iOS “Search” key
+          returnKeyType="search"
           placeholder="Search articles..."
           className="pl-10 pr-4 h-12 bg-white border border-neutral-200 rounded-xl text-[16px]"
           placeholderTextColor="#9ca3af"
