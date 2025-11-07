@@ -4,7 +4,7 @@
     "slug": "aluehealth",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/postpartum-app_splash.png",
+    "icon": "./assets/images/aluehealth-app_splash.png",
     "scheme": "aluehealth",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,

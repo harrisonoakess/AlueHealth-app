@@ -63,13 +63,13 @@ export default function MealNoteModal({
 
           <View style={styles.buttonRow}>
             <TouchableOpacity style={[styles.button, styles.secondary]} onPress={onCancel}>
-              <Ionicons name="close-circle" size={20} color="#3b82f6" />
+              <Ionicons name="close-circle" size={20} color="#7B53A6" />
               <Text style={[styles.buttonText, styles.secondaryText]}>Cancel</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.button, styles.primary]} onPress={onConfirm}>
-              <Ionicons name="checkmark-circle" size={20} color="#fff" />
-              <Text style={styles.buttonText}>Confirm</Text>
+              <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+              <Text style={[styles.buttonText, styles.primaryText]}>Confirm</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -87,9 +87,16 @@ const styles = StyleSheet.create({
   },
   content: {
     width: "90%",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#E5E7EB",
+    shadowColor: "#7B53A6",
+    shadowOpacity: 0.15,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
   title: { fontSize: 18, fontWeight: "700", color: "#111827", marginBottom: 6, textAlign: "center" },
   subtitle: { fontSize: 13, color: "#6b7280", textAlign: "center", marginBottom: 16 },
@@ -129,8 +136,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
   },
-  primary: { backgroundColor: "#3b82f6" },
-  secondary: { backgroundColor: "#f3f4f6", borderWidth: 1, borderColor: "#d1d5db" },
-  buttonText: { fontSize: 14, fontWeight: "600", color: "#fff" },
-  secondaryText: { color: "#3b82f6" },
+  primary: {
+    backgroundColor: "#7B53A6",
+    shadowColor: "#7B53A6",
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  secondary: { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E5E7EB" },
+  buttonText: { fontSize: 14, fontWeight: "700" },
+  primaryText: { color: "#FFFFFF" },
+  secondaryText: { color: "#7B53A6" },
 });
