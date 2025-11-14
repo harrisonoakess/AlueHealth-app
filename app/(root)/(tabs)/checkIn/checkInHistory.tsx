@@ -1,5 +1,5 @@
 // app/(root)/(tabs)/checkIn/checkInHistory.tsx
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -9,11 +9,13 @@ import {
   Alert,
   Platform,
   Share,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Calendar, Download } from "lucide-react-native";
 import * as FileSystem from "expo-file-system";
+import { supabase } from "../../../../lib/supabase";
 
 /** ---- Shim for older/newer Expo typings that hide these constants ---- */
 const getBaseDir = (): string => {
@@ -26,71 +28,85 @@ const getBaseDir = (): string => {
   );
 };
 
+type CheckInRow = {
+  id: string;
+  checkin_date: string;
+  sleep_index: number | null;
+  energy: number;
+  mood: string | null;
+  pain: number;
+  symptoms: string[];
+  feeding: string | null;
+  water_glasses: number;
+  notes: string | null;
+};
+
 export default function CheckInHistory() {
   const router = useRouter();
+  const [checkIns, setCheckIns] = useState<CheckInRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Mock data for check-ins
-  const checkIns = [
-    {
-      date: "2025-10-23",
-      sleep: ":blush:",
-      energy: 7,
-      mood: "Happy",
-      pain: 3,
-      symptoms: ["Cramping"],
-      feeding: "Breastfeeding",
-      water: 8,
-      notes: "Feeling much better today. Baby slept longer!",
-    },
-    {
-      date: "2025-10-22",
-      sleep: ":sleeping:",
-      energy: 4,
-      mood: "Tired",
-      pain: 5,
-      symptoms: ["Bleeding", "Fatigue"],
-      feeding: "Combination",
-      water: 6,
-      notes: "Rough night. Need more rest.",
-    },
-    {
-      date: "2025-10-21",
-      sleep: ":blush:",
-      energy: 6,
-      mood: "Content",
-      pain: 4,
-      symptoms: ["Cramping"],
-      feeding: "Breastfeeding",
-      water: 9,
-      notes: "Good day overall. Started walking again.",
-    },
-    {
-      date: "2025-10-20",
-      sleep: ":tired_face:",
-      energy: 3,
-      mood: "Overwhelmed",
-      pain: 6,
-      symptoms: ["Bleeding", "Cramping", "Soreness"],
-      feeding: "Breastfeeding",
-      water: 5,
-      notes: "Very challenging day. Needed extra support.",
-    },
-  ];
+  useEffect(() => {
+    let active = true;
 
-  const emojiFromShortcode = (code: string) => {
-    switch (code) {
-      case ":blush:":
-        return "😊";
-      case ":sleeping:":
-        return "😴";
-      case ":tired_face:":
-        return "😫";
-      default:
-        return "😌";
-    }
+    const fetchCheckIns = async () => {
+      try {
+        setLoading(true);
+        setErrorMessage(null);
+
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
+
+        if (authError) throw authError;
+        if (!user) {
+          setErrorMessage("Please sign in to view your check-ins.");
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("check_ins")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("checkin_date", { ascending: false })
+          .limit(30);
+
+        if (error) throw error;
+        if (!active) return;
+
+        setCheckIns((data as CheckInRow[]) ?? []);
+      } catch (err: any) {
+        console.error("Failed to load check-ins", err);
+        if (active) {
+          setErrorMessage(err?.message ?? "Unable to load your check-ins.");
+          setCheckIns([]);
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    void fetchCheckIns();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const emojiFromIndex = (index: number | null) => {
+    if (index == null) return "–";
+    const emojis = ["😴", "🥱", "😌", "🙂", "😁"];
+    return emojis[index] ?? "😌";
   };
 
+  const derivedCheckIns = useMemo(() => checkIns, [checkIns]);
+
   const handleExport = async () => {
+    if (!derivedCheckIns.length) {
+      Alert.alert("Nothing to export", "Log a check-in first, then export.");
+      return;
+    }
     try {
       const headers = [
         "Date",
@@ -104,15 +120,15 @@ export default function CheckInHistory() {
         "Notes",
       ];
 
-      const rows = checkIns.map((c) => [
-        new Date(c.date).toLocaleDateString(),
-        emojiFromShortcode(c.sleep),
+      const rows = derivedCheckIns.map((c) => [
+        new Date(c.checkin_date).toLocaleDateString(),
+        emojiFromIndex(c.sleep_index),
         String(c.energy),
-        c.mood,
+        c.mood ?? "",
         String(c.pain),
         c.symptoms.join("; "),
-        c.feeding,
-        `${c.water} glasses`,
+        c.feeding ?? "",
+        `${c.water_glasses} glasses`,
         (c.notes || "").replace(/"/g, '""'), // escape quotes
       ]);
 
@@ -189,17 +205,31 @@ export default function CheckInHistory() {
         </View>
 
         <Text style={styles.subtitle}>
-          View your check-ins to share with your healthcare provider.
+          Tap a day to view details or export everything as CSV for your provider.
         </Text>
 
-        {/* Cards */}
-        <View style={{ gap: 12 }}>
-          {checkIns.map((c) => (
-            <View key={c.date} style={styles.card}>
+        {loading ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="large" color="#7B53A6" />
+            <Text style={styles.loadingText}>Loading your check-ins...</Text>
+          </View>
+        ) : errorMessage ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        ) : !derivedCheckIns.length ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>No check-ins yet</Text>
+            <Text style={styles.emptySubtitle}>Log your first update to see history here.</Text>
+          </View>
+        ) : (
+          <View style={{ gap: 12 }}>
+            {derivedCheckIns.map((c) => (
+              <View key={c.id} style={styles.card}>
               <View style={styles.dateRow}>
                 <Calendar size={16} color="#9C72C2" />
                 <Text style={styles.dateText}>
-                  {new Date(c.date).toLocaleDateString("en-US", {
+                  {new Date(c.checkin_date).toLocaleDateString("en-US", {
                     weekday: "long",
                     year: "numeric",
                     month: "long",
@@ -213,7 +243,7 @@ export default function CheckInHistory() {
                 <View style={styles.gridItem}>
                   <Text style={styles.label}>Sleep Quality</Text>
                   <Text style={styles.sleepEmoji}>
-                    {emojiFromShortcode(c.sleep)}
+                    {emojiFromIndex(c.sleep_index)}
                   </Text>
                 </View>
                 <View style={styles.gridItem}>
@@ -222,7 +252,7 @@ export default function CheckInHistory() {
                 </View>
                 <View style={styles.gridItem}>
                   <Text style={styles.label}>Mood</Text>
-                  <Badge variant="secondary" text={c.mood} />
+                  <Badge variant="secondary" text={c.mood ?? "—"} />
                 </View>
                 <View style={styles.gridItem}>
                   <Text style={styles.label}>Pain Level</Text>
@@ -243,11 +273,11 @@ export default function CheckInHistory() {
                 <View style={styles.gridPair}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>Feeding</Text>
-                    <Text style={styles.value}>{c.feeding}</Text>
+                    <Text style={styles.value}>{c.feeding ?? "—"}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>Water Intake</Text>
-                    <Text style={styles.value}>{c.water} glasses</Text>
+                    <Text style={styles.value}>{c.water_glasses} glasses</Text>
                   </View>
                 </View>
 
@@ -261,6 +291,7 @@ export default function CheckInHistory() {
             </View>
           ))}
         </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -355,6 +386,31 @@ const styles = StyleSheet.create({
   exportText: { fontSize: 13, color: "#111827", fontWeight: "700" },
 
   subtitle: { color: "#6B7280", marginBottom: 12, fontSize: 13 },
+  loadingWrap: {
+    alignItems: "center",
+    paddingVertical: 48,
+    gap: 12,
+  },
+  loadingText: { color: "#6B7280", fontSize: 13 },
+  errorBox: {
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: "rgba(239,68,68,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.3)",
+  },
+  errorText: { color: "#B91C1C", fontWeight: "600", textAlign: "center" },
+  emptyState: {
+    paddingVertical: 40,
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#E5E7EB",
+  },
+  emptyTitle: { fontSize: 16, fontWeight: "700", color: "#111827" },
+  emptySubtitle: { fontSize: 13, color: "#6B7280" },
 
   // Card
   card: {

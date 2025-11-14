@@ -94,6 +94,7 @@ async def analyze_meal(
             "Analyze this meal photo and return EXACTLY one JSON object matching the "
             "MealAnalysis schema. Use grams for macros, provide calories/macros for "
             "each item, and round calories_total to the nearest integer. "
+            "when giving food suggestions, tailor the suggestions to a breastfeeding mother"
             "When uncertain, add an explanation to assumptions[] and lower confidence. "
             f"User note (if any): {note or 'n/a'}"
         )

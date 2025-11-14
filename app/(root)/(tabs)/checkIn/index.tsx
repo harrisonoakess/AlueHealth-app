@@ -10,11 +10,21 @@ import {
   TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Slider from "@react-native-community/slider"; // expo install @react-native-community/slider
+import Slider from "@react-native-community/slider";
 import { useRouter } from "expo-router";
+import { supabase } from "../../../../lib/supabase";
+
+// Helpers
+const localYmd = (d = new Date()) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
 
 export default function CheckIn() {
   const router = useRouter();
+  const [saving, setSaving] = useState(false);
 
   // --- State (RN-friendly) ---
   const [sleep, setSleep] = useState<number | null>(null);
@@ -32,19 +42,61 @@ export default function CheckIn() {
   const symptomOptions = ["Cramping", "Bleeding", "Soreness", "Headache", "Night Sweats"];
   const feedingOptions = ["Breastfeeding", "Formula", "Both", "Not applicable"];
 
-  const handleSave = () => {
-    Alert.alert("Nice job 💕", "Your day is logged.");
-    // TODO: send to API/Supabase here
-  };
-
-  const goHistory = () => {
-    router.push("/(root)/(tabs)/checkIn/checkInHistory");
-  };
-
   const toggleSymptom = (symptom: string) => {
     setSymptoms((prev) =>
       prev.includes(symptom) ? prev.filter((s) => s !== symptom) : [...prev, symptom]
     );
+  };
+
+  // ---- Save to Supabase (single-table MVP) ----
+  const handleSave = async () => {
+    if (saving) return;
+
+    try {
+      setSaving(true);
+
+      const { data: auth } = await supabase.auth.getUser();
+      const user_id = auth?.user?.id;
+      if (!user_id) {
+        Alert.alert("Not signed in", "Please sign in to save your check-in.");
+        return;
+      }
+
+      // Optional client guards (DB has checks too):
+      if (energy < 0 || energy > 10) throw new Error("Energy out of range (0–10)");
+      if (pain < 0 || pain > 10) throw new Error("Pain out of range (0–10)");
+
+      const payload = {
+        user_id,
+        checkin_date: localYmd(), // one-per-day key in user's local tz
+        client_tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        sleep_index: sleep, // 0..4 or null
+        energy,
+        mood, // string or null
+        pain,
+        symptoms, // text[]
+        feeding, // string or null
+        water_glasses: waterIntake,
+        notes: notes?.trim() || null,
+      };
+
+      const { error } = await supabase
+        .from("check_ins")
+        .upsert([payload], { onConflict: "user_id,checkin_date" });
+
+      if (error) throw error;
+
+      Alert.alert("Nice job 💕", "Your day is logged.");
+      router.push("/(root)/(tabs)/checkIn/checkInHistory");
+    } catch (e: any) {
+      Alert.alert("Save failed", e?.message ?? "Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const goHistory = () => {
+    router.push("/(root)/(tabs)/checkIn/checkInHistory");
   };
 
   return (
@@ -250,11 +302,19 @@ export default function CheckIn() {
         {/* Save */}
         <Pressable
           onPress={handleSave}
-          style={({ pressed }) => [styles.saveBtn, { opacity: pressed ? 0.85 : 1 }]}
+          disabled={saving}
+          style={({ pressed }) => [
+            styles.saveBtn,
+            pressed && !saving && styles.saveBtnPressed,
+          ]}
           accessibilityRole="button"
           accessibilityLabel="Save check-in"
         >
-          <Text style={styles.saveText}>Save Check-In</Text>
+          <View style={styles.savePill}>
+            <Text style={styles.saveText}>
+              {saving ? "Saving..." : "Save Check-In"}
+            </Text>
+          </View>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -295,7 +355,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
     ...Platform.select({
-      ios: { shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.06,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 2 },
+      },
       android: { elevation: 1 },
     }),
   },
@@ -307,7 +372,12 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     ...Platform.select({
-      ios: { shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } },
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 3 },
+      },
       android: { elevation: 2 },
     }),
   },
@@ -351,12 +421,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
+  // --- SAVE BUTTON ---
   saveBtn: {
-    height: 52,
-    borderRadius: 14,
+    marginTop: 24,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#7B53A6",
   },
-  saveText: { color: "#fff", fontSize: 17, fontWeight: "600" },
+  saveBtnPressed: {
+    opacity: 0.85,
+  },
+  // This is the actual purple "chip" behind the text
+  savePill: {
+    backgroundColor: "#7B53A6", // << CLEAR COLOR BEHIND "SAVE CHECK-IN"
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 999,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  saveText: {
+    color: "#FFFFFF",
+    fontSize: 17,
+    fontWeight: "700",
+  },
 });
