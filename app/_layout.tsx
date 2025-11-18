@@ -2,8 +2,14 @@ import "../global.css"
 import { Stack } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import "react-native-reanimated"
+import { useEffect } from "react"
+import { warmBackend } from "../lib/backendWarmup"
 
 export default function RootLayout() {
+  useEffect(() => {
+    warmBackend()
+  }, [])
+
   return (
     <>
       <StatusBar style="light" />
@@ -43,4 +49,3 @@ export default function RootLayout() {
 
 //   return <Stack screenOptions={{ headerShown: false }} />
 // }
-
