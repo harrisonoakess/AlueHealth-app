@@ -7,15 +7,15 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "env": { "EXPO_APP_CONFIG": "app.json" }
+      "env": { "EXPO_APP_CONFIG": "app.config.ts" }
     },
     "preview": {
       "distribution": "internal",
-      "env": { "EXPO_APP_CONFIG": "app.json" }
+      "env": { "EXPO_APP_CONFIG": "app.config.ts" }
     },
     "production": {
       "autoIncrement": true,
-      "env": { "EXPO_APP_CONFIG": "app.json" }
+      "env": { "EXPO_APP_CONFIG": "app.config.ts" }
     }
   },
   "submit": {
