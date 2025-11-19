@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aluehealth.app",
-      "buildNumber": "1",
+      "buildNumber": "3",
       "infoPlist": {
         "NSCameraUsageDescription": "We use the camera to capture meal photos.",
         "NSPhotoLibraryUsageDescription": "We access your photo library so you can upload meal images.",
