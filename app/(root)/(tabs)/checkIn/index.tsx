@@ -136,11 +136,15 @@ export default function CheckIn() {
                   onPress={() => setSleep(i)}
                   style={({ pressed }) => [
                     styles.emojiBtn,
-                    active ? styles.emojiActive : styles.emojiIdle,
-                    { transform: [{ scale: pressed || active ? 1.06 : 1 }] },
+                    active && styles.emojiBtnActive,
+                    pressed && styles.emojiBtnPressed,
                   ]}
                 >
-                  <Text style={{ fontSize: 28 }}>{emoji}</Text>
+                  <View style={[styles.emojiCircle, active && styles.emojiCircleActive]}>
+                    <Text style={[styles.emojiSymbol, active && styles.emojiSymbolActive]}>
+                      {emoji}
+                    </Text>
+                  </View>
                 </Pressable>
               );
             })}
@@ -387,14 +391,55 @@ const styles = StyleSheet.create({
 
   rowSpread: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
   emojiBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+        shadowOffset: { width: 0, height: 1 },
+      },
+      android: { elevation: 1 },
+    }),
   },
-  emojiIdle: { backgroundColor: "#ffffff" },
-  emojiActive: { backgroundColor: "#7B53A622" },
+  emojiBtnActive: {
+    borderColor: "#7B53A6",
+    backgroundColor: "#F4E6FF",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#7B53A6",
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 3 },
+      },
+      android: { elevation: 3 },
+    }),
+  },
+  emojiBtnPressed: {
+    transform: [{ scale: 0.95 }],
+  },
+  emojiCircle: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+  },
+  emojiCircleActive: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#E8D7FB",
+  },
+  emojiSymbol: { fontSize: 28 },
+  emojiSymbolActive: { color: "#4F1F6D" },
 
   scaleRow: {
     marginTop: 8,
